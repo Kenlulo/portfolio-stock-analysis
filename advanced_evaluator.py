@@ -48,8 +48,11 @@ def load_local_data(ticker):
                     'BalanceSheet': pd.read_excel(xls, 'BalanceSheet'),
                     'Ratios': pd.read_excel(xls, 'Ratios')
                 }
-        except Exception:
+        except Exception as e:
+            st.error(f"🛠️ [Debug] Lỗi mở file Excel ({ticker}): {str(e)}")
             return None
+    else:
+        st.error(f"🛠️ [Debug] File không tồn tại tại đường dẫn: {file_path}")
     return None
 
 # --- NAVIGATION MENU (Dọc - Sidebar) ---
@@ -261,7 +264,15 @@ if ticker:
             stock = LocalStock(local_data)
             st.success(f"📁 Chế độ Offline Tĩnh: Đã tải dữ liệu Snapshot an toàn cho mã {ticker} (Chốt ngày 06/04).")
         else:
-            st.error(f"❌ Không tìm thấy dữ liệu Snapshot cho mã {ticker}. Xin vui lòng kiểm tra thư mục 'data_snapshot' hoặc chạy background script.")
+            st.error(f"❌ Thuật toán không thể đọc được dữ liệu '{ticker}'. Hãy xem dòng thông báo [Debug] bên trên để biết chính xác nguyên nhân!")
+            
+            # Liệt kê thử xem thư mục gốc có gì để chuẩn đoán bệnh
+            st.write("📂 **Cấu trúc thư mục hiện tại trên Đám mây đang là:**")
+            st.write(os.listdir(SCRIPT_DIR))
+            if os.path.exists(DATA_DIR):
+                st.write(f"📂 **Thư mục {DATA_DIR} có:**", os.listdir(DATA_DIR))
+            else:
+                st.error("🚨 THƯ MỤC 'data_snapshot' BỊ MẤT TÍCH KHỎI GITHUB!")
             st.warning("⚠️ LƯU Ý: Chức năng gọi API Realtime đã bị tắt để đảm bảo an toàn pháp lý khi public tựa Portfolio.")
             st.stop()
                 
