@@ -42,11 +42,12 @@ def load_local_data(ticker):
     if os.path.exists(file_path):
         try:
             with pd.ExcelFile(file_path) as xls:
+                sheets = xls.sheet_names
                 return {
-                    'Price': pd.read_excel(xls, 'Price'),
-                    'IncomeStatement': pd.read_excel(xls, 'IncomeStatement'),
-                    'BalanceSheet': pd.read_excel(xls, 'BalanceSheet'),
-                    'Ratios': pd.read_excel(xls, 'Ratios')
+                    'Price': pd.read_excel(xls, 'Price') if 'Price' in sheets else pd.DataFrame(),
+                    'IncomeStatement': pd.read_excel(xls, 'IncomeStatement') if 'IncomeStatement' in sheets else pd.DataFrame(),
+                    'BalanceSheet': pd.read_excel(xls, 'BalanceSheet') if 'BalanceSheet' in sheets else pd.DataFrame(),
+                    'Ratios': pd.read_excel(xls, 'Ratios') if 'Ratios' in sheets else pd.DataFrame()
                 }
         except Exception as e:
             st.error(f"🛠️ [Debug] Lỗi mở file Excel ({ticker}): {str(e)}")
@@ -629,13 +630,13 @@ if ticker:
             # --- 3. MARKET CORRELATION (TƯƠNG QUAN VNINDEX) ---
             st.subheader("3. Tương quan Thị trường (VNINDEX Correlation Model)")
             try:
-                # Lấy dữ liệu VNINDEX
-                vnindex = Vnstock().stock(symbol="VNINDEX", source='VCI')
-                vn_df = vnindex.quote.history(start=start_date, end=end_date)
-                
-                if not vn_df.empty:
+                # Đọc dữ liệu Offline VNINDEX
+                vnindex_data = load_local_data("VNINDEX")
+                if vnindex_data and not vnindex_data['Price'].empty:
+                    vn_df = vnindex_data['Price'].copy()
                     vn_df['time'] = pd.to_datetime(vn_df['time'])
                     vn_df.set_index('time', inplace=True)
+                    vn_df = vn_df.loc[vn_df.index <= '2026-04-06']
                     
                     # Merge data for alignment
                     corr_df = pd.DataFrame()
@@ -643,30 +644,35 @@ if ticker:
                     corr_df['VNINDEX'] = vn_df['close']
                     corr_df.dropna(inplace=True)
                     
-                    # Calculate daily returns to find correlation
-                    returns = corr_df.pct_change().dropna()
-                    correlation = returns[ticker].corr(returns['VNINDEX'])
-                    
-                    # Normalize prices to base 100 for visual comparison
-                    corr_df[f'{ticker} (Base 100)'] = (corr_df[ticker] / corr_df[ticker].iloc[0]) * 100
-                    corr_df['VNINDEX (Base 100)'] = (corr_df['VNINDEX'] / corr_df['VNINDEX'].iloc[0]) * 100
-                    
-                    st.write(f"**Hệ số tương quan (Pearson Correlation) với VNIndex: `{correlation:.2f}`**")
-                    st.info("💡 Nếu hệ số > 0.7: Cổ phiếu bám sát thị trường chung. Ngược lại nếu < 0.3 thì cổ phiếu đó có lối đi riêng.")
-                    
-                    if correlation > 0.7:
-                        st.write("➡️ Kết luận: Cổ phiếu này đang **bám sát** thị trường chung.")
-                    elif correlation < 0.3:
-                        st.write("➡️ Kết luận: Cổ phiếu này có **lối đi riêng**.")
-                    else:
-                        st.write("➡️ Kết luận: Cổ phiếu có sự tương quan **trung bình**.")
+                    if not corr_df.empty and len(corr_df) > 10:
+                        # Calculate daily returns to find correlation
+                        returns = corr_df.pct_change().dropna()
+                        correlation = returns[ticker].corr(returns['VNINDEX'])
                         
-                    # Plot comparison chart
-                    fig_corr = go.Figure()
-                    fig_corr.add_trace(go.Scatter(x=corr_df.index, y=corr_df[f'{ticker} (Base 100)'], line=dict(color='blue', width=2), name=ticker))
-                    fig_corr.add_trace(go.Scatter(x=corr_df.index, y=corr_df['VNINDEX (Base 100)'], line=dict(color='gray', width=2, dash='dot'), name='VNINDEX'))
-                    fig_corr.update_layout(height=400, title="So sánh Hiệu suất (Đã chuẩn hóa về 100 điểm)", yaxis_title="Tăng trưởng (%)")
-                    st.plotly_chart(fig_corr, width='stretch')
+                        # Normalize prices to base 100 for visual comparison
+                        corr_df[f'{ticker} (Base 100)'] = (corr_df[ticker] / corr_df[ticker].iloc[0]) * 100
+                        corr_df['VNINDEX (Base 100)'] = (corr_df['VNINDEX'] / corr_df['VNINDEX'].iloc[0]) * 100
+                        
+                        st.write(f"**Hệ số tương quan (Pearson Correlation) với VNIndex: `{correlation:.2f}`**")
+                        st.info("💡 Nếu hệ số > 0.7: Cổ phiếu bám sát thị trường chung. Ngược lại nếu < 0.3 thì cổ phiếu đó có lối đi riêng.")
+                        
+                        if correlation > 0.7:
+                            st.write("➡️ Kết luận: Cổ phiếu này đang **bám sát** thị trường chung.")
+                        elif correlation < 0.3:
+                            st.write("➡️ Kết luận: Cổ phiếu này có **lối đi riêng**.")
+                        else:
+                            st.write("➡️ Kết luận: Cổ phiếu có sự tương quan **trung bình**.")
+                            
+                        # Plot comparison chart
+                        fig_corr = go.Figure()
+                        fig_corr.add_trace(go.Scatter(x=corr_df.index, y=corr_df[f'{ticker} (Base 100)'], line=dict(color='blue', width=2), name=ticker))
+                        fig_corr.add_trace(go.Scatter(x=corr_df.index, y=corr_df['VNINDEX (Base 100)'], line=dict(color='gray', width=2, dash='dot'), name='VNINDEX'))
+                        fig_corr.update_layout(height=400, title="So sánh Hiệu suất (Đã chuẩn hóa về 100 điểm)", yaxis_title="Tăng trưởng (%)", template="plotly_dark")
+                        st.plotly_chart(fig_corr, use_container_width=True)
+                    else:
+                        st.warning("Không đủ dữ liệu lịch sử chuẩn để tính tương quan.")
+                else:
+                    st.warning("⚠️ Không tìm thấy dữ liệu VNINDEX_snapshot.xlsx.")
             except Exception as e:
                 st.warning(f"Không thể vẽ biểu đồ tương quan lúc này: {e}")
             
