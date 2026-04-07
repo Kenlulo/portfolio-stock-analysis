@@ -79,7 +79,7 @@ with st.sidebar:
     
     sidebar_available_tickers = []
     if os.path.exists(DATA_DIR):
-        sidebar_available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx")]
+        sidebar_available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx") and not f.startswith("VNINDEX")]
     if not sidebar_available_tickers:
         sidebar_available_tickers = ["FPT"]
     
@@ -139,7 +139,7 @@ elif selected == "So Sánh Cổ Phiếu":
     import os
     available_tickers = []
     if os.path.exists(DATA_DIR):
-        available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx")]
+        available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx") and not f.startswith("VNINDEX")]
     if not available_tickers:
         available_tickers = ["CTG", "MBB", "TCB", "FPT", "HPG", "VNM"]
         
