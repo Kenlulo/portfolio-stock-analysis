@@ -10,7 +10,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from streamlit_option_menu import option_menu
 
-# Page Configuration
+# Base Directory Config
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(SCRIPT_DIR, "data_snapshot")
+
 # Page Configuration
 st.set_page_config(page_title="Hệ Thống Phân Tích Cổ Phiếu Toàn Diện", layout="wide")
 st.title("📈 Hệ Thống Đánh Giá Cổ Phiếu Toàn Diện")
@@ -35,7 +38,7 @@ class LocalStock:
         self.finance = LocalFinance(data_dict)
 
 def load_local_data(ticker):
-    file_path = f"data_snapshot/{ticker}_snapshot.xlsx"
+    file_path = os.path.join(DATA_DIR, f"{ticker}_snapshot.xlsx")
     if os.path.exists(file_path):
         try:
             with pd.ExcelFile(file_path) as xls:
@@ -71,8 +74,8 @@ with st.sidebar:
     st.header("Cài Đặt (Settings)")
     
     sidebar_available_tickers = []
-    if os.path.exists("data_snapshot"):
-        sidebar_available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir("data_snapshot") if f.endswith("_snapshot.xlsx")]
+    if os.path.exists(DATA_DIR):
+        sidebar_available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx")]
     if not sidebar_available_tickers:
         sidebar_available_tickers = ["FPT"]
     
@@ -131,8 +134,8 @@ elif selected == "So Sánh Cổ Phiếu":
     
     import os
     available_tickers = []
-    if os.path.exists("data_snapshot"):
-        available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir("data_snapshot") if f.endswith("_snapshot.xlsx")]
+    if os.path.exists(DATA_DIR):
+        available_tickers = [f.replace("_snapshot.xlsx", "") for f in os.listdir(DATA_DIR) if f.endswith("_snapshot.xlsx")]
     if not available_tickers:
         available_tickers = ["CTG", "MBB", "TCB", "FPT", "HPG", "VNM"]
         
